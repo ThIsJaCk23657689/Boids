@@ -18,6 +18,7 @@
 #include "../Headers/camera.h"
 #include "../Headers/light.h"
 #include "../Headers/fog.h"
+#include "../Headers/cylinder.h"
 #include "../Headers/boid.h"
 
 #include <vector>
@@ -42,6 +43,7 @@ void drawBox(Shader shader);
 void drawAxis(Shader shader);
 void updateROVFront();
 void drawSphere();
+void drawCone();
 void setFullScreen();
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -137,6 +139,9 @@ unsigned int planeVAO, planeVBO;
 std::vector<float> sphereVertices;
 std::vector<unsigned int> sphereIndices;
 unsigned int sphereVAO, sphereVBO, sphereEBO;
+
+Cylinder cone(1.0f, 1.0f, 1.0f);
+unsigned int coneVAO, coneVBO, coneEBO;
 
 static bool enableBillboard = true;
 
@@ -430,6 +435,12 @@ int main() {
 			drawFish(myShader, boids[i].Position, boids[i].Size);
 		}
 		modelMatrix.pop();
+
+		modelMatrix.push();
+		myShader.setMat4("model", modelMatrix.top());
+		drawCone();
+		modelMatrix.pop();
+		
 
 		/*
 		// ==================== Draw obstacles ====================
@@ -850,6 +861,25 @@ void geneObejectData() {
 	// ========== Generate sphere vertex data ==========
 	geneSphereData();
 	// ==================================================
+
+
+	// ========== Generate cylinder vertex data ==========
+	glGenVertexArrays(1, &coneVAO);
+	glGenBuffers(1, &coneVBO);
+	glGenBuffers(1, &coneEBO);
+	glBindVertexArray(coneVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, coneVBO);
+		glBufferData(GL_ARRAY_BUFFER, cone.getVertexSize() * sizeof(float), cone.getVertices(), GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, coneEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, cone.getIndexSize() * sizeof(unsigned int), cone.getIndices(), GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glBindVertexArray(0);
+	// ==================================================
 }
 
 void geneSphereData() {
@@ -1093,6 +1123,14 @@ void drawSphere() {
 	modelMatrix.push();
 	glBindVertexArray(sphereVAO);
 	glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	modelMatrix.pop();
+}
+
+void drawCone() {
+	modelMatrix.push();
+	glBindVertexArray(coneVAO);
+	glDrawElements(GL_TRIANGLES, cone.getIndexSize(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 	modelMatrix.pop();
 }
