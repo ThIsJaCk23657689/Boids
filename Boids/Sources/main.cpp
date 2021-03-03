@@ -122,7 +122,6 @@ static float GammaValue = 0.868;
 
 // Foggy Setting
 Fog fog(glm::vec4(0.266f, 0.5f, 0.609f, 1.0f), true, global_near, global_far);
-static bool fogManual = false;
 
 // Object Data
 std::vector<float> cubeVertices;
@@ -140,7 +139,7 @@ std::vector<float> sphereVertices;
 std::vector<unsigned int> sphereIndices;
 unsigned int sphereVAO, sphereVBO, sphereEBO;
 
-Cylinder cone(1.0f, 1.0f, 1.0f);
+Cylinder cone(0.0f, 0.2f, 0.8f, 40, 20);
 unsigned int coneVAO, coneVBO, coneEBO;
 
 static bool enableBillboard = true;
@@ -218,6 +217,7 @@ int main() {
 
 	// Create shader program
 	Shader myShader("Shaders/lighting.vs", "Shaders/lighting.fs");
+	Shader normalShader("Shaders/normal_visualization.vs", "Shaders/normal_visualization.fs", "Shaders/normal_visualization.gs");
 	
 	// Create object data
 	geneObejectData();
@@ -370,6 +370,7 @@ int main() {
 			myShader.setInt("lights[" + std::to_string(i + 5) + "].caster", spotLights[i].Caster);
 		}
 
+		fog.Density = 0.003f;
 		myShader.setVec4("fog.color", fog.Color);
 		myShader.setFloat("fog.density", fog.Density);
 		myShader.setInt("fog.mode", fog.Mode);
@@ -380,20 +381,10 @@ int main() {
 
 		// Render on the screen;
 
-		if (!fogManual) {
-			if (camera.Position.y >= 0.0f) {
-				fog.Density = 0.01f;
-			} else {
-				fog.Density = 0.15f;
-			}
-		}
-
-
 		// ==================== Draw origin and 3 axes ====================
 		if (showAxis) {
 			drawAxis(myShader);
 		}
-
 
 		// ==================== Draw Skybox (Using Cubemap) ====================
 		glDepthFunc(GL_LEQUAL);
@@ -426,6 +417,7 @@ int main() {
 		*/
 
 		// ==================== Draw Boids ====================
+		/*
 		modelMatrix.push();
 		for (unsigned int i = 0; i < boids.size(); i++) {
 			boids[i].edges(20, 20, 20);
@@ -435,12 +427,38 @@ int main() {
 			drawFish(myShader, boids[i].Position, boids[i].Size);
 		}
 		modelMatrix.pop();
+		*/
 
+		myShader.setBool("material.enableColorTexture", false);
+		myShader.setBool("material.enableSpecularTexture", false);
+		myShader.setBool("material.enableEmission", false);
+		myShader.setBool("material.enableEmissionTexture", false);
+		myShader.setVec4("material.ambient", glm::vec4(0.02f, 0.02f, 0.02f, 1.0));
+		myShader.setVec4("material.diffuse", glm::vec4(0.60f, 0.20f, 0.0f, 1.0));
+		myShader.setVec4("material.specular", glm::vec4(0.40f, 0.10f, 0.0f, 1.0));
+		myShader.setFloat("material.shininess", 32.0f);
 		modelMatrix.push();
-		myShader.setMat4("model", modelMatrix.top());
+			for (unsigned int i = 0; i < boids.size(); i++) {
+				boids[i].edges(20, 20, 20);
+				boids[i].flock(boids, separation, alignment, cohesion);
+				boids[i].update(deltaTime);
+				modelMatrix.push();
+					modelMatrix.save(glm::translate(modelMatrix.top(), boids[i].Position));
+					myShader.setMat4("model", modelMatrix.top());
+					drawCone();
+				modelMatrix.pop();
+			}
+		modelMatrix.pop();
+
+		/*
+		normalShader.use();
+		normalShader.setMat4("view", view);
+		normalShader.setMat4("projection", projection);
+		modelMatrix.push();
+		normalShader.setMat4("model", modelMatrix.top());
 		drawCone();
 		modelMatrix.pop();
-		
+		*/
 
 		/*
 		// ==================== Draw obstacles ====================
@@ -455,8 +473,8 @@ int main() {
 		modelMatrix.pop();
 		*/
 
-		/*
 		// ==================== Draw Plastic Object ====================
+		myShader.use();
 		myShader.setBool("material.enableColorTexture", false);
 		myShader.setBool("material.enableSpecularTexture", false);
 		myShader.setBool("material.enableEmission", false);
@@ -474,9 +492,11 @@ int main() {
 			modelMatrix.pop();
 		}
 		modelMatrix.pop();
-		*/
+
+		
 
 		// ==================== draw light ball ====================
+		myShader.use();
 		myShader.setBool("material.enableColorTexture", false);
 		myShader.setBool("material.enableSpecularTexture", false);
 		myShader.setBool("material.enableEmission", true);
@@ -633,7 +653,7 @@ void showUI() {
 				std::string index = ss.str();
 
 				if (ImGui::TreeNode(std::string("Point Light " + index).c_str())) {
-					ImGui::SliderFloat3(std::string("Position").c_str(), (float*)&pointLights[i].Position, -50.0f, 50.0f);
+					ImGui::SliderFloat3(std::string("Position").c_str(), glm::value_ptr(pointLights[i].Position), -50.0f, 50.0f);
 					ImGui::SliderFloat3(std::string("Ambient").c_str(), (float*)&pointLights[i].Ambient, 0.0f, 1.0f);
 					ImGui::SliderFloat3(std::string("Diffuse").c_str(), (float*)&pointLights[i].Diffuse, 0.0f, 1.0f);
 					ImGui::SliderFloat3(std::string("Specular").c_str(), (float*)&pointLights[i].Specular, 0.0f, 1.0f);
@@ -682,8 +702,7 @@ void showUI() {
 		}
 		
 		if (ImGui::BeginTabItem("Fog")) {
-			ImGui::Checkbox(std::string("Manual Control").c_str(), &fogManual);
-			ImGui::SliderFloat4(std::string("Color").c_str(), (float*)&fog.Color, 0.0f, 1.0f);
+			ImGui::SliderFloat4(std::string("Color").c_str(), static_cast<float*>(&fog.Color.x), 0.0f, 1.0f);
 			ImGui::SliderFloat(std::string("Density").c_str(), (float*)&fog.Density, 0.0f, 1.0f);
 
 			const char* items_a[] = { "LINEAR", "EXP", "EXP2" };
@@ -761,10 +780,10 @@ void geneObejectData() {
 		-0.5f, -0.5f, -0.5f,	0.0f, -1.0f, 0.0f,	0.0f, 0.0f,
 		-0.5f, -0.5f,  0.5f,	0.0f, -1.0f, 0.0f,	0.0f, 1.0f,
 
-		 0.5f,  0.5f, -0.5f,	1.0f, 0.0f, -1.0f,	1.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,	1.0f, 0.0f, -1.0f,	1.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f,	1.0f, 0.0f, -1.0f,	0.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,	1.0f, 0.0f, -1.0f,	0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,	0.0f, 0.0f, -1.0f,	1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,	0.0f, 0.0f, -1.0f,	1.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,	0.0f, 0.0f, -1.0f,	0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,	0.0f, 0.0f, -1.0f,	0.0f, 1.0f,
 	};
 	cubeIndices = {
 		0, 1, 3,
@@ -869,9 +888,9 @@ void geneObejectData() {
 	glGenBuffers(1, &coneEBO);
 	glBindVertexArray(coneVAO);
 		glBindBuffer(GL_ARRAY_BUFFER, coneVBO);
-		glBufferData(GL_ARRAY_BUFFER, cone.getVertexSize() * sizeof(float), cone.getVertices(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, cone.getVertexSize(), cone.getVertices(), GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, coneEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, cone.getIndexSize() * sizeof(unsigned int), cone.getIndices(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, cone.getIndexSize(), cone.getIndices(), GL_STATIC_DRAW);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(1);
@@ -888,14 +907,14 @@ void geneSphereData() {
 	unsigned int longitude = 30;
 
 	for (int i = 0; i <= latitude; i++) {
-		float theta = i * M_PI / latitude;
+		float theta = M_PI * i / latitude;
 		float sinTheta = sin(theta);
 		float cosTheta = cos(theta);
 		for (int j = 0; j <= longitude; j++) {
-			float phi = j * 2.0f * M_PI / longitude;
+			float phi = 2.0f * M_PI * j / longitude;
 			float sinPhi = sin(phi);
 			float cosPhi = cos(phi);
-
+			
 			float x = cosPhi * sinTheta;
 			float y = cosTheta;
 			float z = sinPhi * sinTheta;
@@ -1130,7 +1149,7 @@ void drawSphere() {
 void drawCone() {
 	modelMatrix.push();
 	glBindVertexArray(coneVAO);
-	glDrawElements(GL_TRIANGLES, cone.getIndexSize(), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, cone.getIndexCount(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 	modelMatrix.pop();
 }

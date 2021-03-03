@@ -51,19 +51,9 @@ public:
 
 		this->generateUnitCircleVertices();
 
-		this->generateVerticesSmooth();
+		this->generateVertices();
 
-		std::cout << "===== Cylinder =====\n"
-			<< "   Base Radius: " << this->BaseRadius << "\n"
-			<< "    Top Radius: " << this->TopRadius << "\n"
-			<< "        Height: " << this->Height << "\n"
-			<< "  Sector Count: " << this->Longitude << "\n"
-			<< "   Stack Count: " << this->Latitude << "\n"
-			<< "Triangle Count: " << getTriangleCount() << "\n"
-			<< "   Index Count: " << getIndexCount() << "\n"
-			<< "  Vertex Count: " << getVertexCount() << "\n"
-			<< "  Normal Count: " << getNormalCount() << "\n"
-			<< "TexCoord Count: " << getTexCoordCount() << std::endl;
+		// this->showInfo();
 	}
 
 	void setBaseRadius(float radius) {
@@ -97,7 +87,11 @@ public:
 	}
 
 	unsigned int getVertexCount() const {
-		return (unsigned int)this->Vertices.size() / 3;
+		return (unsigned int)this->Vertices.size() / 8;
+	}
+
+	unsigned int getPositionCount() const {
+		return (unsigned int)this->Position.size() / 3;
 	}
 
 	unsigned int getNormalCount() const {
@@ -112,16 +106,16 @@ public:
 		return (unsigned int)this->Indices.size();
 	}
 
-	unsigned int getLineIndexCount() const {
-		return (unsigned int)this->LineIndices.size();
-	}
-
 	unsigned int getTriangleCount() const {
 		return (unsigned int)this->getIndexCount() / 3;
 	}
 
 	unsigned int getVertexSize() const {
 		return (unsigned int)this->Vertices.size() * sizeof(float);
+	}
+
+	unsigned int getPositionSize() const {
+		return (unsigned int)this->Position.size() * sizeof(float);
 	}
 
 	unsigned int getNormalSize() const {
@@ -136,12 +130,12 @@ public:
 		return (unsigned int)this->Indices.size() * sizeof(unsigned int);
 	}
 
-	unsigned int getLineIndexSize() const {
-		return (unsigned int)this->LineIndices.size() * sizeof(unsigned int);
-	}
-
 	const float* getVertices() const {
 		return this->Vertices.data();
+	}
+
+	const float* getPosition() const {
+		return this->Position.data();
 	}
 
 	const float* getNormals() const {
@@ -156,12 +150,19 @@ public:
 		return this->Indices.data();
 	}
 
-	const unsigned int* getLineIndices() const {
-		return this->LineIndices.data();
-	}
-
-	void draw() const {
-		
+	void showInfo() const {
+		std::cout << "===== Cylinder =====\n"
+			<< "   Base Radius: " << this->BaseRadius << std::endl
+			<< "    Top Radius: " << this->TopRadius << std::endl
+			<< "        Height: " << this->Height << std::endl
+			<< "  Sector Count: " << this->Longitude << std::endl
+			<< "   Stack Count: " << this->Latitude << std::endl
+			<< "Triangle Count: " << getTriangleCount() << std::endl
+			<< "   Index Count: " << getIndexCount() << std::endl
+			<< "  Vertex Count: " << getVertexCount() << std::endl
+			<< "  Position Count: " << getPositionCount() << std::endl
+			<< "  Normal Count: " << getNormalCount() << std::endl
+			<< "TexCoord Count: " << getTexCoordCount() << std::endl;
 	}
 	
 private:
@@ -170,28 +171,29 @@ private:
 	float Height;
 	unsigned int Longitude;
 	unsigned int Latitude;
+	unsigned int BaseIndex;
+	unsigned int TopIndex;
 	std::vector<float> UnitCircleVertices;
 	std::vector<float> Vertices;
+	std::vector<float> Position;
 	std::vector<float> Normals;
 	std::vector<float> TexCoords;
 	std::vector<unsigned int> Indices;
-	std::vector<unsigned int> LineIndices;
 
 	void clearVectors() {
 		std::vector<float>().swap(this->Vertices);
+		std::vector<float>().swap(this->Position);
 		std::vector<float>().swap(this->Normals);
 		std::vector<float>().swap(this->TexCoords);
 		std::vector<unsigned int>().swap(this->Indices);
-		std::vector<unsigned int>().swap(this->LineIndices);
 	}
 	
-	void generateVerticesSmooth() {
+	void generateVertices() {
 
 		// Clear memory of prev arrays
 		this->clearVectors();
 
 		float x, y, z;
-		// float s, t;
 		float radius;
 
 		std::vector<float> sideNormals = this->generateSideNormals();
@@ -204,36 +206,36 @@ private:
 			for (unsigned int j = 0, k = 0; j <= this->Longitude; j++, k += 3) {
 				x = this->UnitCircleVertices[k];
 				y = this->UnitCircleVertices[k + 1];
-				this->addVertex(x * radius, y * radius, z);
+				this->addPosition(x * radius, y * radius, z);
 				this->addNormal(sideNormals[k], sideNormals[k + 1], sideNormals[k + 2]);
 				this->addTexCoord((float)j / this->Longitude, t);
 			}
 		}
 
-		unsigned int baseVertexIndex = (unsigned int)this->Vertices.size() / 3;
+		unsigned int baseVertexIndex = (unsigned int)this->Vertices.size() / 8;
 		z = -this->Height * 0.5f;
-		this->addVertex(0, 0, z);
+		this->addPosition(0, 0, z);
 		this->addNormal(0, 0, -1);
 		this->addTexCoord(0.5f, 0.5f);
 		for (unsigned int i = 0, j = 0; i < this->Longitude; i++, j += 3) {
 			x = this->UnitCircleVertices[j];
 			y = this->UnitCircleVertices[j + 1];
-			this->addVertex(x * this->BaseRadius, y * this->BaseRadius, z);
+			this->addPosition(x * this->BaseRadius, y * this->BaseRadius, z);
 			this->addNormal(0, 0, -1);
 			this->addTexCoord(-x * 0.5f + 0.5f, -y * 0.5f + 0.5f);
 		}
 
-		unsigned int topVertexIndex = (unsigned int)this->Vertices.size() / 3;
+		unsigned int topVertexIndex = (unsigned int)this->Vertices.size() / 8;
 		z = this->Height * 0.5f;
-		this->addVertex(0, 0, z);
+		this->addPosition(0, 0, z);
 		this->addNormal(0, 0, 1);
 		this->addTexCoord(0.5f, 0.5f);
 		for (unsigned int i = 0, j = 0; i < this->Longitude; i++, j += 3) {
 			x = this->UnitCircleVertices[j];
 			y = this->UnitCircleVertices[j + 1];
-			this->addVertex(x * this->TopRadius, y * this->TopRadius, z);
+			this->addPosition(x * this->TopRadius, y * this->TopRadius, z);
 			this->addNormal(0, 0, 1);
-			this->addTexCoord(x * 0.5f + 0.5f, y * 0.5f + 0.5f);
+			this->addTexCoord(x * 0.5f + 0.5f, -y * 0.5f + 0.5f);
 		}
 
 		unsigned int k1, k2;
@@ -241,20 +243,12 @@ private:
 			k1 = i * (this->Longitude + 1);
 			k2 = k1 + this->Longitude + 1;
 			for (unsigned int j = 0; j < this->Longitude; j++, k1++, k2++) {
-				this->addIndices(k1, k1 + 1, k2);
-				this->addIndices(k2, k1 + 1, k2 + 1);
-				this->LineIndices.push_back(k1);
-				this->LineIndices.push_back(k2);
-				this->LineIndices.push_back(k2);
-				this->LineIndices.push_back(k2 + 1);
-				if (i == 0) {
-					this->LineIndices.push_back(k1);
-					this->LineIndices.push_back(k1 + 1);
-				}
+				this->addIndices(k1, k2, k1 + 1);
+				this->addIndices(k2, k2 + 1, k1 + 1);
 			}
 		}
 
-		unsigned int baseIndex = (unsigned int)this->Indices.size();
+		this->BaseIndex = (unsigned int)this->Indices.size();
 		for (unsigned int i = 0, k = baseVertexIndex + 1; i < this->Longitude; i++, k++) {
 			if (i < (this->Longitude - 1)) {
 				this->addIndices(baseVertexIndex, k + 1, k);
@@ -263,7 +257,7 @@ private:
 			}
 		}
 
-		unsigned int topIndex = (unsigned int)this->Indices.size();
+		this->TopIndex = (unsigned int)this->Indices.size();
 		for (unsigned int i = 0, k = topVertexIndex + 1; i < this->Longitude; i++, k++) {
 			if (i < (this->Longitude - 1)) {
 				this->addIndices(topVertexIndex, k, k + 1);
@@ -286,33 +280,46 @@ private:
 		}
 	}
 
-	void addVertex(float x, float y, float z) {
+	void addPosition(float x, float y, float z) {
+		this->Position.push_back(x);
+		this->Position.push_back(y);
+		this->Position.push_back(z);
+		
 		this->Vertices.push_back(x);
 		this->Vertices.push_back(y);
 		this->Vertices.push_back(z);
+		// std::cout << "x:" << x << ", y:" << y << ", z:" << z << std::endl;
 	}
 
 	void addNormal(float nx, float ny, float nz) {
 		this->Normals.push_back(nx);
 		this->Normals.push_back(ny);
 		this->Normals.push_back(nz);
+		
+		this->Vertices.push_back(nx);
+		this->Vertices.push_back(ny);
+		this->Vertices.push_back(nz);
 	}
 
 	void addTexCoord(float u, float v) {
 		this->TexCoords.push_back(u);
 		this->TexCoords.push_back(v);
+		
+		this->Vertices.push_back(u);
+		this->Vertices.push_back(v);
 	}
 
 	void addIndices(unsigned int i1, unsigned int i2, unsigned int i3) {
 		this->Indices.push_back(i1);
 		this->Indices.push_back(i2);
-		this->Indices.push_back(i2);
 		this->Indices.push_back(i3);
+		// std::cout << "i1:" << i1 << ", i2:" << i2 << ", i3:" << i3 << std::endl;
 	}
 	
 	// Generate shared normal vectors of the side of cylinder
 	std::vector<float> generateSideNormals() {
-		float sectorStep = 2 * M_PI / this->Longitude;
+		std::vector<float> sideNormal;
+		float sectorStep = M_PI * 2 / this->Longitude;
 		float sectorAngle;
 
 		// Compute the normal vector at 0 degree first
@@ -324,16 +331,11 @@ private:
 		std::vector<float> normals;
 		for (unsigned int i = 0; i <= this->Longitude; i++) {
 			sectorAngle = i * sectorStep;
-			this->Normals.push_back(cos(sectorAngle) * x0 - sin(sectorAngle) * y0);
-			this->Normals.push_back(sin(sectorAngle) * x0 + cos(sectorAngle) * y0);
-			this->Normals.push_back(z0);
-
-			float nx = cos(sectorAngle) * x0 - sin(sectorAngle) * y0;
-			float ny = sin(sectorAngle) * x0 + cos(sectorAngle) * y0;
-			std::cout << "normal=(" << nx << ", " << ny << ", " << z0
-				<< "), length=" << sqrtf(nx * nx + ny * ny + z0 * z0) << std::endl;
+			sideNormal.push_back(cos(sectorAngle) * x0 - sin(sectorAngle) * y0);
+			sideNormal.push_back(sin(sectorAngle) * x0 + cos(sectorAngle) * y0);
+			sideNormal.push_back(z0);
 		}
 
-		return this->Normals;
+		return sideNormal;
 	}
 };

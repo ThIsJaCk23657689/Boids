@@ -170,6 +170,9 @@
     <None Include="imgui.ini" />
     <None Include="Shaders\lighting.fs" />
     <None Include="Shaders\lighting.vs" />
+    <None Include="Shaders\normal_visualization.fs" />
+    <None Include="Shaders\normal_visualization.gs" />
+    <None Include="Shaders\normal_visualization.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\load_image.cpp" />

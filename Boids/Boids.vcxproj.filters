@@ -94,6 +94,9 @@
     <None Include="Shaders\lighting.fs" />
     <None Include="Shaders\lighting.vs" />
     <None Include="imgui.ini" />
+    <None Include="Shaders\normal_visualization.vs" />
+    <None Include="Shaders\normal_visualization.fs" />
+    <None Include="Shaders\normal_visualization.gs" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\load_image.cpp">
