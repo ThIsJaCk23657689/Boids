@@ -21,7 +21,7 @@ public:
 		this->Velocity = velocity;
 		this->Acceleration = glm::vec3(0.0f);
 		this->MaxSpeed = MAXSPEED;
-		this->Model = glm::mat4(0.0f);
+		this->Model = glm::mat4(1.0f);
 	}
 
 	void flock(std::vector<Boid> boids, float s_atten, float a_atten, float c_atten) {

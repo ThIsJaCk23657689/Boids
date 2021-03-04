@@ -11,6 +11,7 @@ out VS_OUT {
 	vec2 TexCoords;
 } vs_out;
 
+uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform bool isCubeMap;

@@ -28,6 +28,7 @@
 #include <ctime>
 #include <random>
 
+void shaderSetting(Shader shader);
 void showUI();
 void setViewMatrix();
 void setProjectionMatrix();
@@ -81,7 +82,7 @@ float deltaTime = 0.0f;
 float lastTime = 0.0f;
 
 // Camera parameter
-Camera camera(glm::vec3(0.0f, 10.0f, 40.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 float lastX = (float)SCR_WIDTH / 2.0f;
 float lastY = (float)SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -308,77 +309,7 @@ int main() {
 		setViewport();
 
 		// Enable Shader and setting view & projection matrix
-		myShader.use();
-		myShader.setInt("skybox", 3);
-
-		myShader.setMat4("view", view);
-		myShader.setMat4("projection", projection);
-		myShader.setVec3("viewPos", camera.Position);
-
-		myShader.setBool("useBlinnPhong", useBlinnPhong);
-		myShader.setBool("useSpotExponent", useSpotExponent);
-		myShader.setBool("useLighting", useLighting);
-		myShader.setBool("useDiffuseTexture", useDiffuseTexture);
-		myShader.setBool("useSpecularTexture", useSpecularTexture);
-		myShader.setBool("useEmission", useEmission);
-		myShader.setBool("useGamma", useGamma);
-		myShader.setFloat("GammaValue", GammaValue);
-		myShader.setBool("isCubeMap", false);
-
-		myShader.setInt("material.diffuse_texture", 0);
-		myShader.setInt("material.specular_texture", 1);
-		myShader.setInt("material.emission_texture", 2);
-
-		myShader.setVec4("material.ambient", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		myShader.setVec4("material.diffuse", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		myShader.setVec4("material.specular", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		myShader.setFloat("material.shininess", 64.0f);
-
-		myShader.setVec3("lights[0].direction", dirLight.Direction);
-		myShader.setVec3("lights[0].ambient", dirLight.Ambient);
-		myShader.setVec3("lights[0].diffuse", dirLight.Diffuse);
-		myShader.setVec3("lights[0].specular", dirLight.Specular);
-		myShader.setBool("lights[0].enable", dirLight.Enable);
-		myShader.setInt("lights[0].caster", dirLight.Caster);
-
-		for (unsigned int i = 0; i < pointLights.size(); i++) {
-			myShader.setVec3("lights[" + std::to_string(i + 1) + "].position", pointLights[i].Position);
-			myShader.setVec3("lights[" + std::to_string(i + 1) + "].ambient", pointLights[i].Ambient);
-			myShader.setVec3("lights[" + std::to_string(i + 1) + "].diffuse", pointLights[i].Diffuse);
-			myShader.setVec3("lights[" + std::to_string(i + 1) + "].specular", pointLights[i].Specular);
-			myShader.setFloat("lights[" + std::to_string(i + 1) + "].constant", pointLights[i].Constant);
-			myShader.setFloat("lights[" + std::to_string(i + 1) + "].linear", pointLights[i].Linear);
-			myShader.setFloat("lights[" + std::to_string(i + 1) + "].quadratic", pointLights[i].Quadratic);
-			myShader.setFloat("lights[" + std::to_string(i + 1) + "].enable", pointLights[i].Enable);
-			myShader.setInt("lights[" + std::to_string(i + 1) + "].caster", pointLights[i].Caster);
-		}
-
-		spotLights[0].Position = camera.Position;
-		spotLights[0].Direction = camera.Front;
-		for (unsigned int i = 0; i < spotLights.size(); i++) {
-			myShader.setVec3("lights[" + std::to_string(i + 5) + "].position", spotLights[i].Position);
-			myShader.setVec3("lights[" + std::to_string(i + 5) + "].direction", spotLights[i].Direction);
-			myShader.setVec3("lights[" + std::to_string(i + 5) + "].ambient", spotLights[i].Ambient);
-			myShader.setVec3("lights[" + std::to_string(i + 5) + "].diffuse", spotLights[i].Diffuse);
-			myShader.setVec3("lights[" + std::to_string(i + 5) + "].specular", spotLights[i].Specular);
-			myShader.setFloat("lights[" + std::to_string(i + 5) + "].constant", spotLights[i].Constant);
-			myShader.setFloat("lights[" + std::to_string(i + 5) + "].linear", spotLights[i].Linear);
-			myShader.setFloat("lights[" + std::to_string(i + 5) + "].quadratic", spotLights[i].Quadratic);
-			myShader.setFloat("lights[" + std::to_string(i + 5) + "].cutoff", glm::cos(glm::radians(spotLights[i].Cutoff)));
-			myShader.setFloat("lights[" + std::to_string(i + 5) + "].outerCutoff", glm::cos(glm::radians(spotLights[i].OuterCutoff)));
-			myShader.setFloat("lights[" + std::to_string(i + 5) + "].exponent", spotLights[i].Exponent);
-			myShader.setBool("lights[" + std::to_string(i + 5) + "].enable", spotLights[i].Enable);
-			myShader.setInt("lights[" + std::to_string(i + 5) + "].caster", spotLights[i].Caster);
-		}
-
-		fog.Density = 0.003f;
-		myShader.setVec4("fog.color", fog.Color);
-		myShader.setFloat("fog.density", fog.Density);
-		myShader.setInt("fog.mode", fog.Mode);
-		myShader.setInt("fog.depthType", fog.DepthType);
-		myShader.setBool("fog.enable", fog.Enable);
-		myShader.setFloat("fog.f_start", fog.F_start);
-		myShader.setFloat("fog.f_end", fog.F_end);
+		shaderSetting(myShader);
 
 		// Render on the screen;
 
@@ -430,14 +361,13 @@ int main() {
 		modelMatrix.pop();
 		*/
 
-		glm::mat4 * boidsMatrices;
-		boidsMatrices = new glm::mat4[boids.size()];
+		std::vector<glm::mat4> boidsMatrices;
 		for (unsigned int i = 0; i < boids.size(); i++) {
 			boids[i].edges(20, 20, 20);
 			boids[i].flock(boids, separation, alignment, cohesion);
 			boids[i].update(deltaTime);
 
-			glm::mat4 boidModel = modelMatrix.top();
+			glm::mat4 boidModel = glm::mat4(1.0f);
 			
 			// translate
 			boidModel = glm::translate(boidModel, boids[i].getPosition());
@@ -447,16 +377,31 @@ int main() {
 			// Rotate
 
 			boids[i].setModel(boidModel);
-			boidsMatrices[i] = boidModel;
+			boidsMatrices.push_back(boidModel);
 			// instanceShader.setMat4("model", boids[i].getModel());
 		}
 
 		unsigned int buffer;
-		glGenBuffers(1, &buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, buffer);
-		glBufferData(GL_ARRAY_BUFFER, boids.size() * sizeof(glm::mat4), &boidsMatrices[0], GL_STATIC_DRAW);
+		GLsizei vec4Size = sizeof(glm::vec4);
+		glGenBuffers(1, &buffer);		
 		glBindVertexArray(coneVAO);
+			glBindBuffer(GL_ARRAY_BUFFER, buffer);
+			glBufferData(GL_ARRAY_BUFFER, boidsMatrices.size() * sizeof(glm::mat4), boidsMatrices.data(), GL_STATIC_DRAW);
+			glEnableVertexAttribArray(3);
+			glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)0);
+			glEnableVertexAttribArray(4);
+			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(vec4Size));
+			glEnableVertexAttribArray(5);
+			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(2 * vec4Size));
+			glEnableVertexAttribArray(6);
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(3 * vec4Size));
+			glVertexAttribDivisor(3, 1);
+			glVertexAttribDivisor(4, 1);
+			glVertexAttribDivisor(5, 1);
+			glVertexAttribDivisor(6, 1);
+		glBindVertexArray(0);
 
+		shaderSetting(instanceShader);
 		instanceShader.use();
 		instanceShader.setBool("material.enableColorTexture", false);
 		instanceShader.setBool("material.enableSpecularTexture", false);
@@ -466,6 +411,7 @@ int main() {
 		instanceShader.setVec4("material.diffuse", glm::vec4(0.60f, 0.20f, 0.0f, 1.0));
 		instanceShader.setVec4("material.specular", glm::vec4(0.40f, 0.10f, 0.0f, 1.0));
 		instanceShader.setFloat("material.shininess", 16.0f);
+		instanceShader.setMat4("model", modelMatrix.top());
 		drawCone();
 
 		/*
@@ -561,12 +507,99 @@ int main() {
 	glDeleteBuffers(1, &sphereVBO);
 	glDeleteBuffers(1, &sphereEBO);
 
+	glDeleteVertexArrays(1, &coneVAO);
+	glDeleteBuffers(1, &coneVBO);
+	glDeleteBuffers(1, &coneEBO);
+
 	// Release the resources.
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 	glfwTerminate();
 	return 0;
+}
+
+void shaderSetting(Shader shader) {
+	shader.use();
+	
+	// Transform matrices setting
+	shader.setMat4("view", view);
+	shader.setMat4("projection", projection);
+
+	// Cubemap setting
+	shader.setInt("skybox", 3);
+	shader.setBool("isCubeMap", false);
+
+	// Global parameters setting
+	shader.setVec3("viewPos", camera.Position);
+	shader.setBool("useBlinnPhong", useBlinnPhong);
+	shader.setBool("useSpotExponent", useSpotExponent);
+	shader.setBool("useLighting", useLighting);
+	shader.setBool("useDiffuseTexture", useDiffuseTexture);
+	shader.setBool("useSpecularTexture", useSpecularTexture);
+	shader.setBool("useEmission", useEmission);
+	shader.setBool("useGamma", useGamma);
+	shader.setFloat("GammaValue", GammaValue);
+	
+	// Material setting
+	shader.setInt("material.diffuse_texture", 0);
+	shader.setInt("material.specular_texture", 1);
+	shader.setInt("material.emission_texture", 2);
+
+	shader.setVec4("material.ambient", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	shader.setVec4("material.diffuse", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	shader.setVec4("material.specular", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	shader.setFloat("material.shininess", 64.0f);
+
+	// Lightning setting (Directional Light)
+	shader.setVec3("lights[0].direction", dirLight.Direction);
+	shader.setVec3("lights[0].ambient", dirLight.Ambient);
+	shader.setVec3("lights[0].diffuse", dirLight.Diffuse);
+	shader.setVec3("lights[0].specular", dirLight.Specular);
+	shader.setBool("lights[0].enable", dirLight.Enable);
+	shader.setInt("lights[0].caster", dirLight.Caster);
+
+	// Lightning setting (Point Light)
+	for (unsigned int i = 0; i < pointLights.size(); i++) {
+		shader.setVec3("lights[" + std::to_string(i + 1) + "].position", pointLights[i].Position);
+		shader.setVec3("lights[" + std::to_string(i + 1) + "].ambient", pointLights[i].Ambient);
+		shader.setVec3("lights[" + std::to_string(i + 1) + "].diffuse", pointLights[i].Diffuse);
+		shader.setVec3("lights[" + std::to_string(i + 1) + "].specular", pointLights[i].Specular);
+		shader.setFloat("lights[" + std::to_string(i + 1) + "].constant", pointLights[i].Constant);
+		shader.setFloat("lights[" + std::to_string(i + 1) + "].linear", pointLights[i].Linear);
+		shader.setFloat("lights[" + std::to_string(i + 1) + "].quadratic", pointLights[i].Quadratic);
+		shader.setFloat("lights[" + std::to_string(i + 1) + "].enable", pointLights[i].Enable);
+		shader.setInt("lights[" + std::to_string(i + 1) + "].caster", pointLights[i].Caster);
+	}
+
+	// Lightning setting (Spotlight)
+	spotLights[0].Position = camera.Position;
+	spotLights[0].Direction = camera.Front;
+	for (unsigned int i = 0; i < spotLights.size(); i++) {
+		shader.setVec3("lights[" + std::to_string(i + 5) + "].position", spotLights[i].Position);
+		shader.setVec3("lights[" + std::to_string(i + 5) + "].direction", spotLights[i].Direction);
+		shader.setVec3("lights[" + std::to_string(i + 5) + "].ambient", spotLights[i].Ambient);
+		shader.setVec3("lights[" + std::to_string(i + 5) + "].diffuse", spotLights[i].Diffuse);
+		shader.setVec3("lights[" + std::to_string(i + 5) + "].specular", spotLights[i].Specular);
+		shader.setFloat("lights[" + std::to_string(i + 5) + "].constant", spotLights[i].Constant);
+		shader.setFloat("lights[" + std::to_string(i + 5) + "].linear", spotLights[i].Linear);
+		shader.setFloat("lights[" + std::to_string(i + 5) + "].quadratic", spotLights[i].Quadratic);
+		shader.setFloat("lights[" + std::to_string(i + 5) + "].cutoff", glm::cos(glm::radians(spotLights[i].Cutoff)));
+		shader.setFloat("lights[" + std::to_string(i + 5) + "].outerCutoff", glm::cos(glm::radians(spotLights[i].OuterCutoff)));
+		shader.setFloat("lights[" + std::to_string(i + 5) + "].exponent", spotLights[i].Exponent);
+		shader.setBool("lights[" + std::to_string(i + 5) + "].enable", spotLights[i].Enable);
+		shader.setInt("lights[" + std::to_string(i + 5) + "].caster", spotLights[i].Caster);
+	}
+
+	// Fog setting
+	fog.Density = 0.003f;
+	shader.setVec4("fog.color", fog.Color);
+	shader.setFloat("fog.density", fog.Density);
+	shader.setInt("fog.mode", fog.Mode);
+	shader.setInt("fog.depthType", fog.DepthType);
+	shader.setBool("fog.enable", fog.Enable);
+	shader.setFloat("fog.f_start", fog.F_start);
+	shader.setFloat("fog.f_end", fog.F_end);
 }
 
 void showUI() {
