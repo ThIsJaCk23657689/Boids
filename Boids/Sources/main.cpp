@@ -217,6 +217,7 @@ int main() {
 
 	// Create shader program
 	Shader myShader("Shaders/lighting.vs", "Shaders/lighting.fs");
+	Shader instanceShader("Shaders/instance.vs", "Shaders/lighting.fs");
 	Shader normalShader("Shaders/normal_visualization.vs", "Shaders/normal_visualization.fs", "Shaders/normal_visualization.gs");
 	
 	// Create object data
@@ -1139,19 +1140,15 @@ void drawAxis(Shader shader) {
 }
 
 void drawSphere() {
-	modelMatrix.push();
 	glBindVertexArray(sphereVAO);
 	glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
-	modelMatrix.pop();
 }
 
 void drawCone() {
-	modelMatrix.push();
 	glBindVertexArray(coneVAO);
-	glDrawElements(GL_TRIANGLES, cone.getIndexCount(), GL_UNSIGNED_INT, 0);
+	glDrawElementsInstanced(GL_TRIANGLES, cone.getIndexCount(), GL_UNSIGNED_INT, 0, boids.size());
 	glBindVertexArray(0);
-	modelMatrix.pop();
 }
 
 void setFullScreen() {
