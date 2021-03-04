@@ -430,24 +430,43 @@ int main() {
 		modelMatrix.pop();
 		*/
 
-		myShader.setBool("material.enableColorTexture", false);
-		myShader.setBool("material.enableSpecularTexture", false);
-		myShader.setBool("material.enableEmission", false);
-		myShader.setBool("material.enableEmissionTexture", false);
-		myShader.setVec4("material.ambient", glm::vec4(0.02f, 0.02f, 0.02f, 1.0));
-		myShader.setVec4("material.diffuse", glm::vec4(0.60f, 0.20f, 0.0f, 1.0));
-		myShader.setVec4("material.specular", glm::vec4(0.40f, 0.10f, 0.0f, 1.0));
-		myShader.setFloat("material.shininess", 16.0f);
-		modelMatrix.push();
-			for (unsigned int i = 0; i < boids.size(); i++) {
-				boids[i].edges(20, 20, 20);
-				boids[i].flock(boids, separation, alignment, cohesion);
-				boids[i].update(deltaTime);
-				boids[i].setModel(glm::translate(modelMatrix.top(), boids[i].getPosition()));
-				myShader.setMat4("model", boids[i].getModel());
-				drawCone();
-			}
-		modelMatrix.pop();
+		glm::mat4 * boidsMatrices;
+		boidsMatrices = new glm::mat4[boids.size()];
+		for (unsigned int i = 0; i < boids.size(); i++) {
+			boids[i].edges(20, 20, 20);
+			boids[i].flock(boids, separation, alignment, cohesion);
+			boids[i].update(deltaTime);
+
+			glm::mat4 boidModel = modelMatrix.top();
+			
+			// translate
+			boidModel = glm::translate(boidModel, boids[i].getPosition());
+			
+			// Scale
+			
+			// Rotate
+
+			boids[i].setModel(boidModel);
+			boidsMatrices[i] = boidModel;
+			// instanceShader.setMat4("model", boids[i].getModel());
+		}
+
+		unsigned int buffer;
+		glGenBuffers(1, &buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, buffer);
+		glBufferData(GL_ARRAY_BUFFER, boids.size() * sizeof(glm::mat4), &boidsMatrices[0], GL_STATIC_DRAW);
+		glBindVertexArray(coneVAO);
+
+		instanceShader.use();
+		instanceShader.setBool("material.enableColorTexture", false);
+		instanceShader.setBool("material.enableSpecularTexture", false);
+		instanceShader.setBool("material.enableEmission", false);
+		instanceShader.setBool("material.enableEmissionTexture", false);
+		instanceShader.setVec4("material.ambient", glm::vec4(0.02f, 0.02f, 0.02f, 1.0));
+		instanceShader.setVec4("material.diffuse", glm::vec4(0.60f, 0.20f, 0.0f, 1.0));
+		instanceShader.setVec4("material.specular", glm::vec4(0.40f, 0.10f, 0.0f, 1.0));
+		instanceShader.setFloat("material.shininess", 16.0f);
+		drawCone();
 
 		/*
 		normalShader.use();

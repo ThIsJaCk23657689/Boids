@@ -18,7 +18,7 @@ uniform bool isCubeMap;
 void main() {
 	vs_out.NaviePos = aPosition;
 	vs_out.FragPos =  vec3(instanceMatrix * vec4(aPosition, 1.0));
-	vs_out.Normal = mat3(transpose(inverse(model))) * aNormal;
+	vs_out.Normal = mat3(transpose(inverse(instanceMatrix))) * aNormal;
 	vs_out.TexCoords = aTextureCoords;
 
 	if (isCubeMap) {
