@@ -436,17 +436,15 @@ int main() {
 		myShader.setVec4("material.ambient", glm::vec4(0.02f, 0.02f, 0.02f, 1.0));
 		myShader.setVec4("material.diffuse", glm::vec4(0.60f, 0.20f, 0.0f, 1.0));
 		myShader.setVec4("material.specular", glm::vec4(0.40f, 0.10f, 0.0f, 1.0));
-		myShader.setFloat("material.shininess", 32.0f);
+		myShader.setFloat("material.shininess", 16.0f);
 		modelMatrix.push();
 			for (unsigned int i = 0; i < boids.size(); i++) {
 				boids[i].edges(20, 20, 20);
 				boids[i].flock(boids, separation, alignment, cohesion);
 				boids[i].update(deltaTime);
-				modelMatrix.push();
-					modelMatrix.save(glm::translate(modelMatrix.top(), boids[i].Position));
-					myShader.setMat4("model", modelMatrix.top());
-					drawCone();
-				modelMatrix.pop();
+				boids[i].setModel(glm::translate(modelMatrix.top(), boids[i].getPosition()));
+				myShader.setMat4("model", boids[i].getModel());
+				drawCone();
 			}
 		modelMatrix.pop();
 
@@ -473,6 +471,7 @@ int main() {
 		modelMatrix.pop();
 		*/
 
+		/*
 		// ==================== Draw Plastic Object ====================
 		myShader.use();
 		myShader.setBool("material.enableColorTexture", false);
@@ -492,6 +491,7 @@ int main() {
 			modelMatrix.pop();
 		}
 		modelMatrix.pop();
+		*/
 
 		
 

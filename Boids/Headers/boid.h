@@ -15,21 +15,13 @@ const float SIZE = 1.0f;
 class Boid
 {
 public:
-	glm::vec3 Position;
-	glm::vec3 Velocity;
-	glm::vec3 Acceleration;
-	unsigned int Id;
-	float PerceptionRadius;
-	float MaxForce;
-	float MaxSpeed;
-	float Size;
-	
 	Boid(glm::vec3 position = glm::vec3(0.0f), glm::vec3 velocity = glm::vec3(1.0f), unsigned int id = 0) : PerceptionRadius(PERCEPTIONRADIUS), MaxForce(MAXFORCE), Size(SIZE) {
 		this->Id = id;
 		this->Position = position;
 		this->Velocity = velocity;
 		this->Acceleration = glm::vec3(0.0f);
 		this->MaxSpeed = MAXSPEED;
+		this->Model = glm::mat4(0.0f);
 	}
 
 	void flock(std::vector<Boid> boids, float s_atten, float a_atten, float c_atten) {
@@ -109,7 +101,29 @@ public:
 		this->Position = this->Position + this->Velocity * deltaTime;
 		this->Acceleration *= 0;
 	}
+
+	// Getter
+	glm::mat4 getModel() const { return this->Model; }
+	glm::vec3 getPosition() const { return this->Position; }
+	glm::vec3 getVelocity() const { return this->Velocity; }
+	glm::vec3 getAcceleration() const { return this->Acceleration; }
+	unsigned int getId() const { return this->Id; }
+	float getSize() const { return this->getSize(); }
+
+	// Setter
+	void setModel(glm::mat4 model) { this->Model = model; }
+	
 private:
+	glm::mat4 Model;
+	glm::vec3 Position;
+	glm::vec3 Velocity;
+	glm::vec3 Acceleration;
+	unsigned int Id;
+	float PerceptionRadius;
+	float MaxForce;
+	float MaxSpeed;
+	float Size;
+	
 	glm::vec3 limit(glm::vec3 vector, float number) {
 		glm::vec3 result = vector;
 		if(glm::length(vector) > number) {
