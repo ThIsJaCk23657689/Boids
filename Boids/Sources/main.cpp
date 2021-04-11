@@ -225,37 +225,51 @@ int main() {
 	geneObejectData();
 
 	// Setting amount of fishes, boxed and grass. 
-	std::default_random_engine generator(time(NULL));
+	std::mt19937_64 rand_generator;
 	std::uniform_real_distribution<float> unif_g(-80.0, 80.0);
 	std::uniform_real_distribution<float> unif_gsize(0.2, 2.0);
 	std::uniform_real_distribution<float> unif_b(-30.0, 30.0);
 
-	std::uniform_real_distribution<float> unif_boid_magnitude(2, 4);
-	std::uniform_real_distribution<float> unif_boid_velocity(-5.0, 5.0);
-	std::uniform_real_distribution<float> unif_boid_position(-20.0, 20.0);
+	std::uniform_real_distribution<float> unif_boid_position(-1, 1);
+	std::uniform_real_distribution<float> unif_boid_direction(-0.01, 0.01);
 	
 	for (int i = 0; i < 20; i++) {
-		boxposition.push_back(glm::vec3(unif_b(generator), 0.0f, unif_b(generator)));
+		boxposition.push_back(glm::vec3(unif_b(rand_generator), 0.0f, unif_b(rand_generator)));
 	}
 
 	for (int i = 0; i < 10; i++) {
-		plasticposition.push_back(glm::vec3(unif_b(generator), 0.0f, unif_b(generator)));
+		plasticposition.push_back(glm::vec3(unif_b(rand_generator), 0.0f, unif_b(rand_generator)));
 	}
 
 	for (int i = 0; i < 600; i++) {
-		grassposition.push_back(glm::vec3(unif_g(generator), 0.0f, unif_g(generator)));
-		grassSize.push_back(unif_gsize(generator));
+		grassposition.push_back(glm::vec3(unif_g(rand_generator), 0.0f, unif_g(rand_generator)));
+		grassSize.push_back(unif_gsize(rand_generator));
 	}
 
-	for (int i = 0; i < 200; i++) {
+	constexpr float radius_max = 10.0f;
+	float x, y, z, rotate_angle;
+	glm::vec3 boid_position;
+	glm::vec3 boid_direction;
+	for (int i = 0; i < 50; i++) {
 		// fishposition.push_back(glm::vec3(unif_f(generator), 0.0f, unif_f(generator)));
 		// fishSize.push_back(unif_fsize(generator));
-
-		glm::vec3 temp_rand_position = glm::vec3(unif_boid_position(generator), unif_boid_position(generator), unif_boid_position(generator));
-		glm::vec3 temp_rand_velocity = glm::vec3(unif_boid_velocity(generator), unif_boid_velocity(generator), unif_boid_velocity(generator));
-		float temp_rand_magnitude = unif_boid_magnitude(generator);
 		
-		boids.push_back(Boid(temp_rand_position, glm::normalize(temp_rand_velocity) * temp_rand_magnitude, i + 1));
+		glm::mat4 model(1.0f);
+
+		do {
+			x = unif_boid_position(rand_generator) * radius_max;
+			y = unif_boid_position(rand_generator) * radius_max;
+			z = unif_boid_position(rand_generator) * radius_max;
+		} while (x * x + y * y + z * z > radius_max);
+		boid_position = glm::vec3(x, y, z);
+
+		boid_direction = glm::vec3(unif_boid_direction(rand_generator), unif_boid_direction(rand_generator), unif_boid_direction(rand_generator));
+
+		model = glm::translate(model, boid_position);
+
+		Boid temp_boid(boid_position, boid_direction);
+		temp_boid.setModel(model);
+		boids.push_back(temp_boid);
 	}
 
 	// Initial Light Setting
@@ -363,21 +377,18 @@ int main() {
 
 		std::vector<glm::mat4> boidsMatrices;
 		for (unsigned int i = 0; i < boids.size(); i++) {
-			boids[i].edges(20, 20, 20);
+			
 			boids[i].flock(boids, separation, alignment, cohesion);
-			boids[i].update(deltaTime);
 
-			glm::mat4 boidModel = glm::mat4(1.0f);
-			
-			// translate
-			boidModel = glm::translate(boidModel, boids[i].getPosition());
-			
-			// Scale
-			
-			// Rotate
+			//boids[i].ApplyForce(boids[i].Cohesion(boids, cohesion));
+			//boids[i].ApplyForce(boids[i].Alignment(boids, alignment));
+			//boids[i].ApplyForce(boids[i].Separation(boids, separation));
+			// boids[i].ApplyForce(boids[i].Edges());
 
-			boids[i].setModel(boidModel);
-			boidsMatrices.push_back(boidModel);
+			boids[i].Update(deltaTime);
+			boids[i].ResetForce();
+
+			boidsMatrices.push_back(boids[i].getModel());
 			// instanceShader.setMat4("model", boids[i].getModel());
 		}
 

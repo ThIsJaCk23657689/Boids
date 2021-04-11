@@ -7,21 +7,138 @@
 #include <glm/gtc/random.hpp>
 #include <vector>
 
-const float PERCEPTIONRADIUS = 5.0f;
-const float MAXFORCE = 0.1f;
-const float MAXSPEED = 4.0f;
-const float SIZE = 1.0f;
+const int PERCEPTION_RADIUS_COHESION = 20;
+const int PERCEPTION_RADIUS_ALIGNMENT = 20;
+const int PERCEPTION_RADIUS_SEPARATION = 10;
+
+const float WEIGHT_FACTOR_RADIUS_TOCENTER_FORCE = 25.0f;
+const float MAX_FORCE_MAGNITUDE = 1.0f;
+const float MAX_SPEED = 10.0f;
 
 class Boid
 {
 public:
-	Boid(glm::vec3 position = glm::vec3(0.0f), glm::vec3 velocity = glm::vec3(1.0f), unsigned int id = 0) : PerceptionRadius(PERCEPTIONRADIUS), MaxForce(MAXFORCE), Size(SIZE) {
-		this->Id = id;
+	Boid(glm::vec3 position = glm::vec3(0.0f), glm::vec3 velocity = glm::vec3(1.0f)) {
 		this->Position = position;
 		this->Velocity = velocity;
 		this->Acceleration = glm::vec3(0.0f);
-		this->MaxSpeed = MAXSPEED;
-		this->Model = glm::mat4(1.0f);
+	}
+
+	void ApplyForce(glm::vec3 force) {
+		this->Acceleration += force;
+	}
+
+	void ResetForce() {
+		this->Acceleration *= 0.0f;
+	}
+
+	void Update(float deltaTime) {
+		this->Position = this->Position + this->Velocity * deltaTime;
+		this->Velocity = this->Velocity + this->Acceleration * deltaTime;
+		// this->Velocity = this->limit(this->Velocity, this->MaxSpeed);
+		// this->Acceleration *= 0;
+
+		this->Model = glm::inverse(glm::lookAt(this->Position, this->Position + this->Velocity, glm::vec3(0.0f, 1.0f, 0.0f)));
+		// this->Model = glm::rotate(this->Model, 90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		/*
+		float norma = sqrt(this->Velocity.x * this->Velocity.x + this->Velocity.y * this->Velocity.y);
+		float turn1 = acos(this->Velocity.x / norma) * 180 / M_PI;
+		float turn2 = asin(this->Velocity.y / norma) * 180 / M_PI;
+		this->Turn = turn1;
+		if (turn2 < 0) this->Turn = -turn1;
+		this->Turn = this->Turn - 90;
+		*/
+	}
+
+	glm::vec3 Cohesion(std::vector<Boid> boids, float atten) {
+		// Cohesion
+		unsigned int neighbors = 0;
+		glm::vec3 sum_position = glm::vec3(0.0f);
+
+		for (int i = 0; i < boids.size(); i++) {
+			float distance = glm::distance(this->Position, boids[i].Position);
+			if ((distance > 0) && (distance < PERCEPTION_RADIUS_COHESION)) {
+				sum_position += boids[i].Position;
+				neighbors++;
+			}
+		}
+
+		glm::vec3 force = glm::vec3(0.0f, 0.0f, 0.0f);
+		if (neighbors > 0) {
+			force = sum_position / static_cast<float>(neighbors);
+		}
+
+		// Limit Force
+		this->LimitForce(force, MAX_FORCE_MAGNITUDE);
+
+		return force;
+	}
+
+	glm::vec3 Alignment(std::vector<Boid> boids, float atten) {
+		// Alignment
+		unsigned int neighbors = 0;
+		glm::vec3 sum_velocity = glm::vec3(0.0f);
+
+		for (int i = 0; i < boids.size(); i++) {
+			float distance = glm::distance(this->Position, boids[i].Position);
+			if ((distance > 0) && (distance < PERCEPTION_RADIUS_ALIGNMENT)) {
+				sum_velocity += boids[i].Velocity;
+				neighbors++;
+			}
+		}
+
+		glm::vec3 force = glm::vec3(0.0f, 0.0f, 0.0f);
+		if (neighbors > 0) {
+			force = sum_velocity / static_cast<float>(neighbors);
+		}
+
+		// Limit Force
+		this->LimitForce(force, MAX_FORCE_MAGNITUDE);
+
+		return force;
+	}
+
+	glm::vec3 Separation(std::vector<Boid> boids, float atten) {
+		// Separation
+		unsigned int neighbors = 0;
+		glm::vec3 sum_pushback_force = glm::vec3(0.0f);
+
+		for (int i = 0; i < boids.size(); i++) {
+			float distance = glm::distance(this->Position, boids[i].Position);
+			if ((distance > 0) && (distance < PERCEPTION_RADIUS_ALIGNMENT)) {
+				glm::vec3 diff = this->Position - boids[i].Position;
+				diff = glm::normalize(diff) / distance;
+				sum_pushback_force += diff;
+				neighbors++;
+			}
+		}
+
+		glm::vec3 force = glm::vec3(0.0f, 0.0f, 0.0f);
+		if (neighbors > 0) {
+			force = sum_pushback_force / static_cast<float>(neighbors);
+		}
+
+		if (glm::length(force) > 0) {
+			this->SetMagnitude(force, MAX_SPEED);
+			force -= this->Velocity;
+
+			// Limit Force
+			this->LimitForce(force, MAX_FORCE_MAGNITUDE);
+		}
+		
+		return force;
+	}
+
+	glm::vec3 Edges() {
+		float distance = glm::distance(this->Position, glm::vec3(0.0f, 0.0f, 0.0f));
+		float weight_factor = 1 / M_PI * atan((distance - WEIGHT_FACTOR_RADIUS_TOCENTER_FORCE) / 4.0f) + 0.5f;
+		glm::vec3 force = -this->Position;
+		force = glm::normalize(force);
+		this->LimitForce(force, MAX_FORCE_MAGNITUDE * 8);
+		force *= weight_factor;
+
+		return force;
 	}
 
 	void flock(std::vector<Boid> boids, float s_atten, float a_atten, float c_atten) {
@@ -34,10 +151,10 @@ public:
 
 		for (unsigned int i = 0; i < boids.size(); i++) {
 			float distance = glm::distance(this->Position, boids[i].Position);
-			if (boids[i].Id != this->Id && distance < this->PerceptionRadius) {
+			if (distance > 0 && distance < this->PerceptionRadius) {
 				// Separation
 				glm::vec3 diff = this->Position - boids[i].Position;
-				diff /= distance;
+				diff = glm::normalize(diff) / distance;
 				avg_pushback_force += diff;
 
 				// Alignment
@@ -52,20 +169,20 @@ public:
 
 		if (neighbors > 0) {
 			avg_pushback_force /= neighbors;
-			avg_pushback_force = this->setMag(avg_pushback_force, this->MaxSpeed);
+			avg_pushback_force = this->SetMagnitude(avg_pushback_force, MAX_SPEED);
 			avg_pushback_force -= this->Velocity;
-			avg_pushback_force = this->limit(avg_pushback_force, this->MaxForce);
+			avg_pushback_force = this->LimitForce(avg_pushback_force, MAX_FORCE_MAGNITUDE);
 
 			avg_velocity /= neighbors;
-			avg_velocity = this->setMag(avg_velocity, this->MaxSpeed);
+			avg_velocity = this->SetMagnitude(avg_velocity, MAX_SPEED);
 			avg_velocity -= this->Velocity;
-			avg_velocity = this->limit(avg_velocity, this->MaxForce);
+			avg_velocity = this->LimitForce(avg_velocity, MAX_FORCE_MAGNITUDE);
 
 			avg_position /= neighbors;
 			avg_position -= this->Position;
-			avg_position = this->setMag(avg_position, this->MaxSpeed);
+			avg_position = this->SetMagnitude(avg_position, MAX_SPEED);
 			avg_position -= this->Velocity;
-			avg_position = this->limit(avg_position, this->MaxForce);
+			avg_position = this->LimitForce(avg_position, MAX_FORCE_MAGNITUDE);
 		}
 		
 		glm::vec3 separation = avg_pushback_force * s_atten;
@@ -75,39 +192,12 @@ public:
 		this->Acceleration = separation + alignment + cohesion;
 	}
 
-	void edges(float x, float y, float z) {
-		if (this->Position.x > x) {
-			this->Position.x = -x;
-		} else if (this->Position.x < -x) {
-			this->Position.x = x;
-		}
-
-		if (this->Position.y > y) {
-			this->Position.y = -y;
-		} else if (this->Position.y < -y) {
-			this->Position.y = y;
-		}
-
-		if (this->Position.z > z) {
-			this->Position.z = -z;
-		} else if (this->Position.z < -z) {
-			this->Position.z = z;
-		}
-	}
-	
-	void update(float deltaTime) {
-		this->Velocity = this->Velocity + this->Acceleration * deltaTime;
-		this->Velocity = this->limit(this->Velocity, this->MaxSpeed);
-		this->Position = this->Position + this->Velocity * deltaTime;
-		this->Acceleration *= 0;
-	}
-
 	// Getter
 	glm::mat4 getModel() const { return this->Model; }
 	glm::vec3 getPosition() const { return this->Position; }
 	glm::vec3 getVelocity() const { return this->Velocity; }
 	glm::vec3 getAcceleration() const { return this->Acceleration; }
-	unsigned int getId() const { return this->Id; }
+
 	float getSize() const { return this->getSize(); }
 
 	// Setter
@@ -118,13 +208,10 @@ private:
 	glm::vec3 Position;
 	glm::vec3 Velocity;
 	glm::vec3 Acceleration;
-	unsigned int Id;
+
 	float PerceptionRadius;
-	float MaxForce;
-	float MaxSpeed;
-	float Size;
 	
-	glm::vec3 limit(glm::vec3 vector, float number) {
+	glm::vec3 LimitForce(glm::vec3 vector, float number) {
 		glm::vec3 result = vector;
 		if(glm::length(vector) > number) {
 			result = glm::normalize(vector) * number;
@@ -132,7 +219,7 @@ private:
 		return result;
 	}
 
-	glm::vec3 setMag(glm::vec3 vector, float number) {
+	glm::vec3 SetMagnitude(glm::vec3 vector, float number) {
 		glm::vec3 result = glm::normalize(vector) * number;
 		return result;
 	}
